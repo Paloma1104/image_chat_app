@@ -1,6 +1,17 @@
+from email.mime import image
+
 from fastapi import FastAPI
 import os
-from fastapi import UploadFile, File
+from fastapi import UploadFile, File, Depends
+
+from sqlalchemy.orm import Session
+
+from app.database.dependencies import get_db
+from app.database.models import Image
+from app.database.database import engine
+from app.database.database import Base
+
+Base.metadata.create_all(bind=engine)
 
 os.makedirs("uploads", exist_ok=True)
 app = FastAPI()
@@ -10,14 +21,27 @@ def home():
     return {"message": "Hello from FastAPI"}
 
 @app.get("/images")
-def list_images():
-    if not os.path.exists("uploads"):
-        return []
+def list_images(
+        db: Session = Depends(get_db)
+):
+    images = db.query(Image).all()
 
-    return os.listdir("uploads")
+    return [
+        {
+            "id": image.id,
+            "filename": image.filename,
+            "title": image.title,
+            "notes": image.notes,
+            "uploaded_at": image.uploaded_at
+        }
+        for image in images
+    ]
 
 @app.post("/images")
-async def upload_image( file: UploadFile = File(...)):
+async def upload_image(
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db)
+):
     contents = await file.read()
 
     file_path = os.path.join("uploads", file.filename)
@@ -25,29 +49,70 @@ async def upload_image( file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         buffer.write(contents)
 
+    image = Image(
+        filename = file.filename,
+        title = file.filename,
+        notes = ""
+    )
+
+    db.add(image)
+    db.commit()
+    db.refresh(image)
+
     return {
-        "filename": file.filename
+        "id": image.id,
+        "filename": image.filename
     }
 
 @app.get("/images/{filename}")
-def get_image(filename: str):
+def get_image(
+    filename: str,
+    db: Session = Depends(get_db)
+):
+    image = (
+        db.query(Image)
+        .filter(Image.filename == filename)
+        .first()
+    )
 
-    file_path = os.path.join("uploads", filename)
+    if image is None:
+        return {
+            "message": "Image not found"
+        }
 
     return {
-        "filename": filename,
-        "exists": os.path.exists(file_path)
+        "id": image.id,
+        "filename": image.filename,
+        "title": image.title,
+        "notes": image.notes,
+        "uploaded_at": image.uploaded_at
     }
 
 @app.delete("/images/{filename}")
-def delete_image(filename: str):
-    file_path = os.path.join("uploads", filename)
-    if not os.path.isfile(file_path):
+def delete_image(
+    filename: str,
+    db: Session = Depends(get_db)
+):
+    image = (
+        db.query(Image)
+        .filter(Image.filename == filename)
+        .first()
+    )
+
+    if image is None:
         return {
             "filename": filename,
             "message": "File not found"
         }
-    os.remove(file_path)
+
+    file_path = os.path.join("uploads", filename)
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    db.delete(image)
+    db.commit()
+
     return {
         "filename": filename,
         "message": "File deleted"
