@@ -26,3 +26,19 @@ def generate_image_caption(image_path):
     )
 
     return response.text
+
+def ask_image_question(
+    image_path,
+    question
+):
+
+    image = Image.open(image_path)
+
+    response = model.generate_content(
+        [
+            question,
+            image
+        ]
+    )
+
+    return response.text

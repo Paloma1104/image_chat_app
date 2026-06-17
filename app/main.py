@@ -1,5 +1,4 @@
 from email.mime import image
-
 from fastapi import FastAPI
 import os
 from fastapi import UploadFile, File, Depends
@@ -11,6 +10,11 @@ from app.database.models import Image, Detection
 from app.services.yolo_service import detect_objects
 from app.database.database import engine
 from app.database.database import Base
+from app.schemas import ChatRequest
+
+from app.services.gemini_service import (
+    ask_image_question
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -213,4 +217,37 @@ def generate_caption(
     return {
         "image_id": image_id,
         "caption": caption
+    }
+
+@app.post("/chat/{image_id}")
+def chat_with_image(
+    image_id: int,
+    request: ChatRequest,
+    db: Session = Depends(get_db)
+):
+
+    image = (
+        db.query(Image)
+        .filter(Image.id == image_id)
+        .first()
+    )
+
+    if image is None:
+        return {
+            "message": "Image not found"
+        }
+
+    file_path = os.path.join(
+        "uploads",
+        image.filename
+    )
+
+    answer = ask_image_question(
+        file_path,
+        request.question
+    )
+
+    return {
+        "question": request.question,
+        "answer": answer
     }
