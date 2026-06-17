@@ -1,4 +1,4 @@
-from services.gemini_service import (
+from app.services.gemini_service import (
     generate_image_caption
 )
 

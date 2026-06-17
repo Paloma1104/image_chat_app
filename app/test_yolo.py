@@ -1,4 +1,4 @@
-from services.yolo_service import detect_objects
+from app.services.yolo_service import detect_objects
 
 print(
     detect_objects(

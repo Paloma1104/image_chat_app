@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lens — Image Intelligence</title>
+
+<link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="logo">Lens<span>.</span></div>
+    <div class="subtitle">Image Intelligence</div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*" multiple>
+      <div class="icon">📁</div>
+      <p>
+        <strong>Click or drag</strong>
+        to upload images<br>
+        PNG, JPG, WEBP
+      </p>
+    </div>
+
+    <div class="sidebar-label">Library</div>
+
+    <div class="image-list" id="imageList"></div>
+  </aside>
+
+  <main class="main" id="main">
+
+    <div class="empty-state" id="emptyState">
+      <div class="big-icon">🖼️</div>
+      <h2>No image selected</h2>
+      <p>Upload an image or pick one from the library.</p>
+    </div>
+
+    <div class="image-view hidden" id="imageView">
+
+      <div class="image-header">
+        <input
+          class="img-title-input"
+          id="titleInput"
+          placeholder="Image title…"
+        >
+
+        <button
+          class="btn success"
+          id="saveMetaBtn"
+          onclick="saveMeta()"
+        >
+          Save
+        </button>
+      </div>
+
+      <div class="action-bar">
+        <button
+          class="btn"
+          id="detectBtn"
+          onclick="runDetect()"
+        >
+          🔍 Detect objects
+        </button>
+
+        <button
+          class="btn"
+          id="captionBtn"
+          onclick="runCaption()"
+        >
+          ✨ Generate caption
+        </button>
+      </div>
+
+      <div class="content-area">
+
+        <div class="image-panel">
+
+          <div>
+            <div class="section-title">
+              Preview
+            </div>
+
+            <div class="preview-wrap">
+              <img
+                id="previewImg"
+                src=""
+                alt=""
+              >
+
+              <button
+                class="preview-toggle hidden"
+                id="toggleAnnotated"
+                onclick="toggleAnnotated()"
+              >
+                Show annotated
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="captionSection"
+            class="hidden"
+          >
+            <div class="section-title">
+              Caption
+            </div>
+
+            <div
+              class="caption-card"
+              id="captionText"
+            ></div>
+          </div>
+
+          <div
+            id="detectionsSection"
+            class="hidden"
+          >
+            <div class="section-title">
+              Detections
+            </div>
+
+            <div
+              class="detections-wrap"
+              id="detectionsList"
+            ></div>
+          </div>
+
+          <div>
+            <div class="section-title">
+              Notes
+            </div>
+
+            <textarea
+              class="notes-textarea"
+              id="notesInput"
+              placeholder="Add notes about this image…"
+            ></textarea>
+          </div>
+
+        </div>
+
+        <div class="chat-panel">
+
+          <div class="chat-header">
+            Ask about this image
+          </div>
+
+          <div
+            class="chat-messages"
+            id="chatMessages"
+          ></div>
+
+          <div class="chat-input-wrap">
+
+            <textarea
+              class="chat-input"
+              id="chatInput"
+              placeholder="Ask a question…"
+              rows="1"
+              onkeydown="handleChatKey(event)"
+              oninput="autoResize(this)"
+            ></textarea>
+
+            <button
+              class="send-btn"
+              onclick="sendChat()"
+            >
+              ➤
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+</div>
+
+<div
+  class="toast"
+  id="toast"
+></div>
+
+<script src="/static/script.js"></script>
+
+</body>
+</html>

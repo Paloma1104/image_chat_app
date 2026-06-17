@@ -1,4 +1,3 @@
-from email.mime import image
 from fastapi import FastAPI
 import os
 from fastapi import UploadFile, File, Depends
@@ -11,19 +10,44 @@ from app.services.yolo_service import detect_objects
 from app.database.database import engine
 from app.database.database import Base
 from app.schemas import ChatRequest, ImageUpdateRequest
-
-from app.services.gemini_service import (
-    ask_image_question
-)
-
+from fastapi import Request
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from app.services.gemini_service import (ask_image_question)
 Base.metadata.create_all(bind=engine)
 
-os.makedirs("uploads", exist_ok=True)
-app = FastAPI()
 
+
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("annotated", exist_ok=True)
+app = FastAPI()
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static"
+)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads"
+)
+
+app.mount(
+    "/annotated",
+    StaticFiles(directory="annotated"),
+    name="annotated"
+)
+
+templates = Jinja2Templates(
+    directory="app/templates"
+)
 @app.get("/")
-def home():
-    return {"message": "Hello from FastAPI"}
+def home(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html"
+    )
 
 @app.get("/images")
 def list_images(
@@ -193,31 +217,38 @@ def generate_caption(
     image_id: int,
     db: Session = Depends(get_db)
 ):
+    try:
 
-    image = (
-        db.query(Image)
-        .filter(Image.id == image_id)
-        .first()
-    )
+        image = (
+            db.query(Image)
+            .filter(Image.id == image_id)
+            .first()
+        )
 
-    if image is None:
+        if image is None:
+            return {
+                "message": "Image not found"
+            }
+
+        file_path = os.path.join(
+            "uploads",
+            image.filename
+        )
+
+        caption = generate_image_caption(
+            file_path
+        )
+
         return {
-            "message": "Image not found"
+            "image_id": image_id,
+            "caption": caption
         }
 
-    file_path = os.path.join(
-        "uploads",
-        image.filename
-    )
+    except Exception as e:
 
-    caption = generate_image_caption(
-        file_path
-    )
-
-    return {
-        "image_id": image_id,
-        "caption": caption
-    }
+        return {
+            "error": str(e)
+        }
 
 @app.post("/chat/{image_id}")
 def chat_with_image(
