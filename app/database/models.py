@@ -24,3 +24,22 @@ class Detection(Base):
     y1 = Column(Float)
     x2 = Column(Float)
     y2 = Column(Float)
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True)
+
+    image_id = Column(
+        Integer,
+        ForeignKey("images.id")
+    )
+
+    role = Column(String)
+
+    message = Column(String)
+
+    created_at = Column(
+        DateTime,
+        default=datetime.now
+    )

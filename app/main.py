@@ -6,11 +6,11 @@ from app.services.image_service import draw_detections
 from sqlalchemy.orm import Session
 from app.services.gemini_service import generate_image_caption
 from app.database.dependencies import get_db
-from app.database.models import Image, Detection
+from app.database.models import Image, Detection, ChatMessage
 from app.services.yolo_service import detect_objects
 from app.database.database import engine
 from app.database.database import Base
-from app.schemas import ChatRequest
+from app.schemas import ChatRequest, ImageUpdateRequest
 
 from app.services.gemini_service import (
     ask_image_question
@@ -247,7 +247,79 @@ def chat_with_image(
         request.question
     )
 
+    user_message = ChatMessage(
+        image_id=image_id,
+        role="user",
+        message=request.question
+    )
+
+    assistant_message = ChatMessage(
+        image_id=image_id,
+        role="assistant",
+        message=answer
+    )
+
+    db.add(user_message)
+    db.add(assistant_message)
+
+    db.commit()
+
     return {
         "question": request.question,
         "answer": answer
+    }
+
+@app.get("/chat/{image_id}")
+def get_chat_history(
+    image_id: int,
+    db: Session = Depends(get_db)
+):
+
+    messages = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.image_id == image_id
+        )
+        .all()
+    )
+
+    return [
+        {
+            "role": message.role,
+            "message": message.message,
+            "created_at": message.created_at
+        }
+        for message in messages
+    ]
+
+@app.put("/images/{image_id}")
+def update_image(
+    image_id: int,
+    request: ImageUpdateRequest,
+    db: Session = Depends(get_db)
+):
+
+    image = (
+        db.query(Image)
+        .filter(Image.id == image_id)
+        .first()
+    )
+
+    if image is None:
+        return {
+            "message": "Image not found"
+        }
+
+    image.title = request.title
+    image.notes = request.notes
+
+    db.commit()
+
+    db.refresh(image)
+
+    return {
+        "id": image.id,
+        "filename": image.filename,
+        "title": image.title,
+        "notes": image.notes
     }
