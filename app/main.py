@@ -7,7 +7,8 @@ from fastapi import UploadFile, File, Depends
 from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
-from app.database.models import Image
+from app.database.models import Image, Detection
+from app.services.yolo_service import detect_objects
 from app.database.database import engine
 from app.database.database import Base
 
@@ -117,3 +118,57 @@ def delete_image(
         "filename": filename,
         "message": "File deleted"
     }
+
+@app.post("/detect/{image_id}")
+def detect_image(
+    image_id: int,
+    db: Session = Depends(get_db)
+):
+    image = (
+        db.query(Image)
+        .filter(Image.id == image_id)
+        .first()
+    )
+
+    if image is None:
+        return {
+            "message": "Image not found"
+        }
+
+    file_path = os.path.join(
+        "uploads",
+        image.filename
+    )
+
+    detections = detect_objects(file_path)
+
+    old_detections = (
+        db.query(Detection)
+        .filter(
+            Detection.image_id == image_id
+        )
+        .all()
+    )
+
+    for detection in old_detections:
+        db.delete(detection)
+
+    db.commit()
+
+    for detection in detections:
+
+        db_detection = Detection(
+            image_id=image_id,
+            label=detection["label"],
+            confidence=detection["confidence"],
+            x1=detection["x1"],
+            y1=detection["y1"],
+            x2=detection["x2"],
+            y2=detection["y2"]
+        )
+
+        db.add(db_detection)
+
+    db.commit()
+
+    return detections
