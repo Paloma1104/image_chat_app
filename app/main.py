@@ -3,9 +3,9 @@ from email.mime import image
 from fastapi import FastAPI
 import os
 from fastapi import UploadFile, File, Depends
-
+from app.services.image_service import draw_detections
 from sqlalchemy.orm import Session
-
+from app.services.gemini_service import generate_image_caption
 from app.database.dependencies import get_db
 from app.database.models import Image, Detection
 from app.services.yolo_service import detect_objects
@@ -142,6 +142,17 @@ def detect_image(
 
     detections = detect_objects(file_path)
 
+    annotated_path = os.path.join(
+        "annotated",
+        f"{image.id}_detected.jpg"
+    )
+
+    draw_detections(
+        file_path,
+        detections,
+        annotated_path
+    )
+
     old_detections = (
         db.query(Detection)
         .filter(
@@ -172,3 +183,34 @@ def detect_image(
     db.commit()
 
     return detections
+
+@app.post("/caption/{image_id}")
+def generate_caption(
+    image_id: int,
+    db: Session = Depends(get_db)
+):
+
+    image = (
+        db.query(Image)
+        .filter(Image.id == image_id)
+        .first()
+    )
+
+    if image is None:
+        return {
+            "message": "Image not found"
+        }
+
+    file_path = os.path.join(
+        "uploads",
+        image.filename
+    )
+
+    caption = generate_image_caption(
+        file_path
+    )
+
+    return {
+        "image_id": image_id,
+        "caption": caption
+    }
