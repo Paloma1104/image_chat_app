@@ -104,14 +104,7 @@ http://127.0.0.1:8000/docs
 | POST   | /chat/{id}         | Ask image questions |
 | GET    | /chat/{id}         | View chat history   |
 
-## Screenshots
 
-Add screenshots of:
-
-* Dashboard
-* Object Detection
-* Caption Generation
-* Image Chat
 
 ## Author
 
